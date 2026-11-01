@@ -1,0 +1,60 @@
+[package]
+name = "tron-bit"
+version = "0.4.0"
+edition = "2021"
+description = "A small desktop companion: Bit from Tron (1982)"
+
+[dependencies]
+# Settings window only (Bit itself is drawn by our own renderer in src/bit.rs).
+eframe = { version = "0.31", default-features = false, features = ["glow", "x11", "wayland"] }
+tray-icon = "0.26"
+# Audio output; the WAVs are decoded and resampled in src/audio.rs.
+cpal = "0.15"
+# The magic eight ball's coin: the operating system's secure random generator.
+getrandom = "0.3"
+
+[target.'cfg(windows)'.dependencies]
+# Bit's window drawn through DirectComposition (src/overlay.rs).
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_DirectComposition",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+] }
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+# The local time, for quiet hours.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# tray-icon needs a GTK main loop on Linux.
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
+
+# Puts the icon (assets/bit.ico) into the Windows .exe.
+[build-dependencies]
+winresource = "0.1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# Bit's renderer and resampler are our own hot loops: keep them fast.
+[profile.release.package.tron-bit]
+opt-level = 3

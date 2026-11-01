@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Bit
+GenericName=Desktop companion
+Comment=Bit from Tron (1982) visits your desktop now and then
+Exec=tron-bit
+Icon=tron-bit
+Terminal=false
+Categories=Amusement;
+StartupNotify=false

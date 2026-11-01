@@ -1,0 +1,170 @@
+name: Build
+
+# Builds and tests Bit for Windows, macOS and Linux (PC and 64-bit ARM). The
+# program is self-contained: its model, sounds and fonts are built into the
+# executable.
+
+# To save GitHub's free minutes and storage, a push to main only builds and
+# tests on Linux. Windows, macOS, ARM Linux and the downloadable packages are
+# made for a version tag like v0.3.0, or when the workflow is started by hand
+# (Actions > Build > Run workflow). The packages go straight onto the
+# release: no workflow artifacts, which count against GitHub's small free
+# storage (release files don't).
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a release for this existing tag (e.g. v0.3.0); leave empty to just build"
+        required: false
+        default: ""
+      systems:
+        description: "Which systems to build: all, or linux (PC and ARM only; much cheaper than all)"
+        required: false
+        default: "all"
+
+# A newer push to the same branch replaces a build still running (saves
+# minutes); version tags each get their own.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  FULL: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+  # The release to publish: the pushed tag, or the tag typed in by hand.
+  RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release_tag }}
+
+jobs:
+  # Makes the release for the build jobs to add their packages to.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release
+        run: |
+          gh release create "$RELEASE_TAG" --verify-tag --title "Bit $RELEASE_TAG" --generate-notes \
+            || echo "Release $RELEASE_TAG already exists"
+
+  build:
+    needs: release
+    # (Also when the release job is skipped, as on a push to main.)
+    if: ${{ !failure() && !cancelled() }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux builds on Ubuntu 22.04 so the downloads also run on older
+        # distributions (their C library is older). ARM is cross-compiled on
+        # the same ordinary Linux machine, billed at the Linux rate.
+        # (A push to main: Linux only. Started by hand with "linux": both
+        # Linux builds. A version tag, or by hand with "all": everything.)
+        include: ${{ fromJSON(!(startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && '[{"os":"ubuntu-22.04","name":"linux"}]' || inputs.systems == 'linux' && '[{"os":"ubuntu-22.04","name":"linux"},{"os":"ubuntu-22.04","name":"linux-arm64","target":"aarch64-unknown-linux-gnu"}]' || '[{"os":"ubuntu-22.04","name":"linux"},{"os":"ubuntu-22.04","name":"linux-arm64","target":"aarch64-unknown-linux-gnu"},{"os":"windows-latest","name":"windows"},{"os":"macos-latest","name":"macos"}]') }}
+    name: build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    env:
+      # Where the program ends up: target/release, or target/<target>/release.
+      OUT: target/${{ matrix.target && format('{0}/', matrix.target) || '' }}release
+      TARGET_ARG: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target || '' }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.name }}
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux' && !matrix.target
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libgtk-3-dev libxdo-dev libayatana-appindicator3-dev libasound2-dev libxkbcommon-dev
+      - name: Install ARM Linux build dependencies
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          # The ARM (arm64) versions of the same libraries, from Ubuntu's
+          # ports archive, plus an ARM cross-compiler.
+          sudo dpkg --add-architecture arm64
+          # The machine's own archives (a mirror list and security.ubuntu.com)
+          # only carry PC packages: limit them to amd64.
+          sudo sed -i -E 's/^deb (\[[^]]*\] )?/deb [arch=amd64] /' /etc/apt/sources.list
+          codename=$(lsb_release -cs)
+          for suite in "$codename" "$codename-updates" "$codename-security"; do
+            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $suite main restricted universe multiverse"
+          done | sudo tee /etc/apt/sources.list.d/arm64.list
+          sudo apt-get update
+          sudo apt-get install -y pkg-config gcc-aarch64-linux-gnu \
+            libgtk-3-dev:arm64 libxdo-dev:arm64 libayatana-appindicator3-dev:arm64 libasound2-dev:arm64 libxkbcommon-dev:arm64
+          {
+            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc"
+            echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
+            echo "PKG_CONFIG_ALLOW_CROSS=1"
+            echo "PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+          } >> "$GITHUB_ENV"
+      - name: Build
+        # --locked: build with exactly the library versions in Cargo.lock.
+        run: cargo build --release --locked ${{ env.TARGET_ARG }}
+      - name: Test
+        # (ARM programs can't run on this PC-type machine.)
+        if: ${{ !matrix.target }}
+        run: cargo test --release --locked
+      - name: Package
+        if: env.FULL == 'true'
+        shell: bash
+        run: |
+          mkdir -p dist
+          name=${{ matrix.name }}
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          pkg="tron-bit-$version-$name"
+          mkdir "$pkg"
+          cp README.md "$pkg/"
+          case "$RUNNER_OS" in
+            Windows)
+              # The icon is built into the .exe (build.rs).
+              cp "$OUT/tron-bit.exe" "$pkg/"
+              7z a "dist/$pkg.zip" "$pkg" > /dev/null
+              ;;
+            macOS)
+              # A Bit.app bundle: the program, its icon, and an Info.plist
+              # that makes it a menu bar app with no Dock icon.
+              app="$pkg/Bit.app/Contents"
+              mkdir -p "$app/MacOS" "$app/Resources"
+              cp "$OUT/tron-bit" "$app/MacOS/"
+              sed "s/VERSION/$version/g" packaging/macos/Info.plist > "$app/Info.plist"
+              set=bit.iconset
+              mkdir "$set"
+              for s in 16 32 128 256 512; do
+                cp "assets/icon/bit-$s.png" "$set/icon_${s}x${s}.png"
+                cp "assets/icon/bit-$((s * 2)).png" "$set/icon_${s}x${s}@2x.png"
+              done
+              iconutil -c icns "$set" -o "$app/Resources/bit.icns"
+              ditto -c -k --keepParent "$pkg" "dist/$pkg.zip"
+              unzip -l "dist/$pkg.zip"
+              ;;
+            *)
+              # The program plus a menu entry, icons and an install script.
+              cp "$OUT/tron-bit" packaging/linux/tron-bit.desktop packaging/linux/install.sh "$pkg/"
+              chmod +x "$pkg/install.sh" "$pkg/tron-bit"
+              mkdir "$pkg/icons"
+              cp assets/icon/bit-{16,32,48,64,128,256,512}.png "$pkg/icons/"
+              file "$pkg/tron-bit"
+              tar -czf "dist/$pkg.tar.gz" "$pkg"
+              tar -tzvf "dist/$pkg.tar.gz"
+              ;;
+          esac
+          ls -l dist
+      - name: Add the package to the release
+        if: env.RELEASE_TAG != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          gh release upload "$RELEASE_TAG" dist/*.zip dist/*.tar.gz --clobber
