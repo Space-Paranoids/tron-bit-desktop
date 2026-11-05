@@ -241,6 +241,10 @@ Windows releases are built and released only by this repository's GitHub Actions
 - Committers, reviewers and approvers: [Space-Paranoids](https://github.com/Space-Paranoids) (the owner). Every signing request is approved by hand.
 - Privacy: this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. (Bit makes no network connections at all.)
 
+## License
+
+Bit's own code is under the [MIT License](LICENSE). The model, fonts and voice clips in `assets/` keep their own terms (see the assets notes above).
+
 ## Disclaimer
 
 Bit is a personal, non-commercial fan project. It is provided "as is", without warranty of any kind, express or implied, including fitness for a particular purpose. It is not supported: there is no promise of fixes, updates or help.
