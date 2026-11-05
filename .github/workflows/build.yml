@@ -36,6 +36,12 @@ env:
   # The release to publish: the pushed tag, or the tag typed in by hand.
   RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release_tag }}
 
+# Every action below is pinned to an exact commit (the version is in the
+# comment), so a changed or hijacked tag can't swap in different code.
+# Jobs get only the access they need.
+permissions:
+  contents: read
+
 jobs:
   # Makes the release for the build jobs to add their packages to.
   release:
@@ -46,7 +52,9 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Create the release
         run: |
           gh release create "$RELEASE_TAG" --verify-tag --title "Bit $RELEASE_TAG" --generate-notes \
@@ -58,6 +66,8 @@ jobs:
     if: ${{ !failure() && !cancelled() }}
     permissions:
       contents: write
+      # (Lets SignPath fetch the unsigned program from this run.)
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -74,11 +84,15 @@ jobs:
       OUT: target/${{ matrix.target && format('{0}/', matrix.target) || '' }}release
       TARGET_ARG: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # (Pinned to a commit of its "stable" branch, which installs the
+      # current stable Rust.)
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           targets: ${{ matrix.target || '' }}
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@2201cc584a476d1b508be977bbe4b7d1c7a52e9c # v2.9.3
         with:
           key: ${{ matrix.name }}
       - name: Install Linux build dependencies
@@ -115,6 +129,43 @@ jobs:
         # (ARM programs can't run on this PC-type machine.)
         if: ${{ !matrix.target }}
         run: cargo test --release --locked
+      # Free code signing for open source from SignPath.io (certificate by
+      # the SignPath Foundation). Off until the repository variable
+      # SIGNPATH_ORGANIZATION_ID and the secret SIGNPATH_API_TOKEN are set
+      # (Settings > Secrets and variables > Actions); until then the .exe
+      # is released unsigned, as before. The unsigned .exe is kept as a
+      # workflow artifact for one day only, for SignPath to fetch.
+      - name: Hand the unsigned program to SignPath
+        id: unsigned
+        if: runner.os == 'Windows' && env.FULL == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tron-bit-windows-unsigned
+          path: ${{ env.OUT }}/tron-bit.exe
+          retention-days: 1
+          if-no-files-found: error
+      - name: Sign the program (SignPath)
+        if: steps.unsigned.outcome == 'success'
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'tron-bit-desktop' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          # (Release signing waits for the request to be approved on
+          # signpath.io: up to an hour.)
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed
+      - name: Use the signed program
+        if: steps.unsigned.outcome == 'success'
+        shell: pwsh
+        run: |
+          $sig = Get-AuthenticodeSignature signed/tron-bit.exe
+          $sig | Format-List Status, StatusMessage, SignerCertificate
+          if ($sig.Status -ne 'Valid') { throw "The signed program's signature isn't valid: $($sig.Status)" }
+          Copy-Item signed/tron-bit.exe "$env:OUT/tron-bit.exe" -Force
       - name: Package
         if: env.FULL == 'true'
         shell: bash
@@ -168,3 +219,23 @@ jobs:
         run: |
           shopt -s nullglob
           gh release upload "$RELEASE_TAG" dist/*.zip dist/*.tar.gz --clobber
+
+  # A SHA256SUMS.txt on the release with the SHA-256 of every download, so
+  # anyone can check a download is exactly what this workflow built.
+  checksums:
+    needs: [release, build]
+    if: ${{ !failure() && !cancelled() && needs.release.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Add SHA256SUMS.txt to the release
+        run: |
+          mkdir dl && cd dl
+          gh release download "$RELEASE_TAG" --pattern '*.zip' --pattern '*.tar.gz'
+          sha256sum -- * | tee ../SHA256SUMS.txt
+          cd ..
+          gh release upload "$RELEASE_TAG" SHA256SUMS.txt --clobber
