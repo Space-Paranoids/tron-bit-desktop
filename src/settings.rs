@@ -26,6 +26,9 @@ pub struct Settings {
     pub quiet_to: u32,
     /// Percent of visits on which Bit says something.
     pub chattiness: u8,
+    /// On a longer visit Bit may change its mind: says one answer, goes back
+    /// to neutral for a moment, then says the other. Off: one answer a visit.
+    pub changes_mind: bool,
     /// Fly at about 30 frames a second instead of the display's rate.
     pub low_power: bool,
     /// Which screens Bit visits: all, the main one, all but the main one,
@@ -77,6 +80,7 @@ impl Default for Settings {
             quiet_from: 22 * 60,
             quiet_to: 8 * 60,
             chattiness: 85,
+            changes_mind: false,
             low_power: true,
             screens: 0,
             spot: 0,
@@ -182,6 +186,7 @@ mod tests {
             always_chatter: 77,
             ask_key: "Ctrl+Shift+F9".into(),
             hide_from_capture: true,
+            changes_mind: true,
             ..Settings::default()
         };
         assert_eq!(parse(&to_text(&s)), s);
@@ -304,6 +309,7 @@ pub fn parse(text: &str) -> Settings {
             }
             "quiet_from" => s.quiet_from = num().map_or(s.quiet_from, |v| v as u32),
             "quiet_to" => s.quiet_to = num().map_or(s.quiet_to, |v| v as u32),
+            "changes_mind" => s.changes_mind = flag().unwrap_or(s.changes_mind),
             "chattiness" => {
                 s.chattiness = num().map_or(s.chattiness, |v| v.clamp(0.0, 100.0) as u8)
             }
@@ -347,6 +353,7 @@ pub fn to_text(s: &Settings) -> String {
          quiet_from = {}\n\
          quiet_to = {}\n\
          chattiness = {}\n\
+         changes_mind = {}\n\
          low_power = {}\n\
          screens = {}\n\
          spot = {}\n\
@@ -375,6 +382,7 @@ pub fn to_text(s: &Settings) -> String {
         s.quiet_from,
         s.quiet_to,
         s.chattiness,
+        s.changes_mind,
         s.low_power,
         s.screens,
         s.spot,
