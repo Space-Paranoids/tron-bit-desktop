@@ -81,8 +81,8 @@
 
   <h3>Linux</h3>
   <p>In a terminal, in the folder you downloaded to (use the file name as downloaded):</p>
-<pre>tar -xzf tron-bit-0.4.0-linux.tar.gz
-cd tron-bit-0.4.0-linux
+<pre>tar -xzf tron-bit-0.5.0-linux.tar.gz
+cd tron-bit-0.5.0-linux
 ./install.sh --autostart</pre>
   <p>This needs no <code>sudo</code>. It puts Bit in <code>~/.local/bin</code> and in your app menu; <code>--autostart</code> also starts it at login. Then start <b>Bit</b> from the app menu.</p>
   <p>On small ARM laptops and boards, or if Bit's windows come up black, add <code>--software</code>:</p>
@@ -114,6 +114,7 @@ cd tron-bit-0.4.0-linux
     <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
     <tbody>
       <tr><td>Says something</td><td>How often Bit says yes or no on a visit.</td></tr>
+      <tr><td>On a visit</td><td><i>One answer</i> (default): Bit says yes or no once. <i>Changes its mind</i>: on a longer visit it sometimes says one, then the other.</td></tr>
       <tr><td>Screens</td><td>All screens, the main one, all but the main one, or <i>Chosen screens</i> picked on a little map. Bit never shows on a screen it's kept off.</td></tr>
       <tr><td>Mode: Always on</td><td>Bit stays on one screen, roaming like it's trapped behind the glass, or hovering in one spot (<i>Movement</i>). <i>Restlessness</i> sets how lively it is.</td></tr>
       <tr><td>Hangs out</td><td>Where on the screen Bit mostly hovers.</td></tr>

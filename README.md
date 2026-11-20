@@ -46,8 +46,8 @@ Pick the download for your machine: `uname -m` prints `x86_64` for the `linux` d
 1. Unpack it:
 
    ```sh
-   tar -xzf tron-bit-0.4.0-linux.tar.gz
-   cd tron-bit-0.4.0-linux
+   tar -xzf tron-bit-0.5.0-linux.tar.gz
+   cd tron-bit-0.5.0-linux
    ```
 
 2. Install it for your user (no `sudo` needed). This puts the program in `~/.local/bin`, its icon in your icon theme, and **Bit** in your app menu:
@@ -99,8 +99,8 @@ To remove Bit, run `./install.sh --uninstall` from the same folder. Your setting
 2. Download the `linux` package, then unpack and install it as above. `install.sh` needs no `sudo` and only writes to your home folder, so SteamOS updates should leave it alone:
 
    ```sh
-   tar -xzf tron-bit-0.4.0-linux.tar.gz
-   cd tron-bit-0.4.0-linux
+   tar -xzf tron-bit-0.5.0-linux.tar.gz
+   cd tron-bit-0.5.0-linux
    ./install.sh --autostart
    ```
 
