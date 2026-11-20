@@ -18,6 +18,7 @@ On screen Bit has no window or background of its own: only Bit itself is drawn o
 - **Quiet during calls** (on by default, Windows): no visits while any app is using your microphone, and Ask Bit answers silently.
 - **Quiet hours** (on by default, 22:00 to 08:00): no visits between two times of day (Fly in and Ask Bit still work).
 - **Says something:** how often Bit says yes or no on a visit.
+- **On a visit:** *One answer* (default): Bit says yes or no once. *Changes its mind*: on a longer visit it sometimes says one, goes back to neutral for a moment, then says the other.
 - **Screens:** all screens, the main screen only, all but the main screen, or *Chosen screens*: click screens on a little map of your desktop to light the ones Bit may visit. Bit never shows on a screen it's kept off, even when flying in or out (when no flight path keeps clear, it comes from and goes into the distance). If your screens are rearranged so a chosen one is gone, Bit visits all of them until you choose again.
 - **Mode: Always on.** Instead of visiting, Bit stays on one screen (*On screen*), roaming it like something trapped behind the glass: it ricochets off the edges, lunges at them, stalls and sets off again. *Restlessness* sets how often it lunges and how fast it goes. Clicking it answers a question (or startles it, with *Clicking Bit* set to shoo). Set *Movement* to *Hovers* and it stays in one spot instead, drifting gently where *Hangs out* says (*Center* is the middle of the screen); drag it and it hovers at the new spot until it next leaves. *Says something* sets how often it says yes or no by itself, from never to about every 15 seconds, as the sound settings allow. Double-click Bit, or untick *Always on* in the tray menu, to go back to visits. Quiet hours, calls, full screen and *Pause* send it away until they end. It always flies at the low-power frame rate.
 - **Hangs out:** where on a screen Bit mostly hovers: anywhere, center, top, bottom, left, right or the corners.
@@ -34,6 +35,7 @@ On screen Bit has no window or background of its own: only Bit itself is drawn o
 Download the package for your system from the repository's **Releases** page:
 
 - **Windows:** `tron-bit.exe`, with Bit's icon built in. It isn't signed, so Windows blocks files downloaded from the internet: right-click `tron-bit.exe`, choose **Properties**, tick **Unblock** and click **OK**. If SmartScreen still warns on first run, choose **More info → Run anyway**. A good home for it is `%LOCALAPPDATA%\Programs\Bit\` (no admin rights needed).
+- **Check a download (optional):** each release has `SHA256SUMS.txt` with the SHA-256 of every download. On Windows, in PowerShell in the folder you downloaded to: `Get-FileHash .\tron-bit-*-windows.zip` and compare the hash with the one in `SHA256SUMS.txt` (on macOS/Linux: `sha256sum -c SHA256SUMS.txt --ignore-missing`).
 - **macOS:** `Bit.app`, with Bit's icon. It runs in the menu bar with no Dock icon. It isn't signed, so open it the first time with right-click → **Open**.
 - **Linux:** two downloads, `linux` for 64-bit PCs (x86-64) and `linux-arm64` for 64-bit ARM (Armbian, Raspberry Pi OS 64-bit, Pinebook and similar). Each is the program plus `install.sh`, which adds Bit to your app menu with its icon (no root needed). Steps below.
 
@@ -232,6 +234,17 @@ Settings save automatically to `settings.toml` in:
 ## Platform notes
 
 Windows is the main tested platform, and the Linux ARM build has been run on a Pinebook. macOS and Linux builds use the same Bit thread, renderer and audio, but show Bit through a transparent egui window that clicks pass through (so no clicking or dragging Bit, and no Ask Bit key) and keep the settings window alive (closing it minimizes it). macOS is untested. On Linux the tray needs an AppIndicator/StatusNotifier host (built into KDE; on GNOME, the *AppIndicator and KStatusNotifierItem Support* extension). On Wayland, desktops may not let a window place itself, so Bit's flight paths work best under X11. On Windows, `tron-bit.exe` has to be unblocked first (right-click → **Properties** → tick **Unblock**), and on macOS the first launch needs right-click → **Open**, since the program isn't signed on either.
+
+## Code signing policy
+
+Windows releases are built and released only by this repository's GitHub Actions workflow (`.github/workflows/build.yml`), from a version tag, and are code signed through [SignPath.io](https://about.signpath.io/) once the project's free open-source signing is approved (free code signing provided by SignPath.io, certificate by the SignPath Foundation). Until then they are unsigned. Every release lists the SHA-256 of each download in `SHA256SUMS.txt`.
+
+- Committers, reviewers and approvers: [Space-Paranoids](https://github.com/Space-Paranoids) (the owner). Every signing request is approved by hand.
+- Privacy: this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. (Bit makes no network connections at all.)
+
+## License
+
+Bit's own code is under the [MIT License](LICENSE). The model, fonts and voice clips in `assets/` keep their own terms (see the assets notes above).
 
 ## Disclaimer
 

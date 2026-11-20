@@ -13,7 +13,7 @@ use eframe::egui::{
 use std::sync::Arc;
 use std::time::Instant;
 
-pub const SIZE: [f32; 2] = [860.0, 664.0];
+pub const SIZE: [f32; 2] = [860.0, 694.0];
 /// How much taller the window grows while the Chosen screens map shows.
 pub const MAP_EXTRA: f32 = 72.0;
 /// The map's height.
@@ -409,6 +409,13 @@ fn visits(ui: &mut egui::Ui, s: &mut Settings, monitors: &[Monitor]) {
     row(ui, "Says something", |ui| {
         ui.add(egui::Slider::new(&mut s.chattiness, 0..=100).suffix(" %"))
             .on_hover_text("How often Bit says yes or no on a visit (percent of visits)");
+    });
+    row(ui, "On a visit", |ui| {
+        let mut v = u8::from(s.changes_mind);
+        choice(ui, "changes_mind", &mut v, &["One answer", "Changes its mind"]).on_hover_text(
+            "One answer: yes or no, once. Changes its mind: sometimes one, a pause, then the other.",
+        );
+        s.changes_mind = v == 1;
     });
     quiet(ui, s);
 }

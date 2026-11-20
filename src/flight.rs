@@ -1,6 +1,7 @@
 //! Where Bit is during a visit, and what shape it is in. Bit darts in from
 //! off screen (sometimes from across the far side, sometimes past the viewer, big and close), brakes to a stop, drifts about one spot,
-//! maybe says yes or no (changing its mind on a longer visit), then speeds
+//! maybe says yes or no (with *Changes its mind* on, sometimes the one and then,
+//! after a pause, the other), then speeds
 //! off, faster and faster. Everything is a function of the visit's clock, so
 //! motion, shape and voice can never drift apart.
 
@@ -56,6 +57,10 @@ const SHOO: f32 = 0.6;
 const NONONO_SECONDS: f32 = 1.43;
 /// Length of the "Yes, yes, yes..." recording (s).
 const YESYESYES_SECONDS: f32 = 1.35;
+
+/// Seconds Bit rests in neutral between its two answers when it changes its
+/// mind.
+const MIND_PAUSE: f32 = 1.0;
 
 /// How long Bit holds a long answer.
 fn long_answer(mood: Mood) -> f32 {
@@ -193,7 +198,7 @@ impl Visit {
         };
         let triple = matches!(forced, Some(Voice::NoNoNo | Voice::YesYesYes))
             || (forced.is_none() && !quick && wants_long && d() < 0.2);
-        let single = quick || triple || forced.is_some();
+        let single = quick || triple || forced.is_some() || !s.changes_mind;
 
         // It hovers somewhere on the chosen screen, and comes in from the
         // side, from the far side (flying right across), from above or
@@ -274,7 +279,7 @@ impl Visit {
         } else if single {
             1.2
         } else {
-            2.4
+            2.4 + MIND_PAUSE
         };
         let base = if quick || ask {
             2.4 + d() * 1.2
@@ -363,24 +368,26 @@ impl Visit {
         };
 
         // While it hovers it may say something, morphing into the answer and
-        // back to neutral; on a longer visit it changes its mind first.
+        // back to neutral. Changing its mind, it goes back to neutral for a
+        // moment between the two answers (so each is heard on its own).
         let other = |m: Mood| if m == Mood::Yes { Mood::No } else { Mood::Yes };
         let talk_from = self.arrive + self.think;
         let talk_to = self.leave - 0.4;
-        let mid = if self.single {
-            talk_to
+        let (first_to, second_from) = if self.single {
+            (talk_to, talk_to)
         } else {
-            (talk_from + talk_to) * 0.5
+            let a = talk_from + (talk_to - talk_from - MIND_PAUSE) * 0.5;
+            (a, a + MIND_PAUSE)
         };
         let morph = |since: f32| (since / MORPH).min(1.0);
+        let last = |m: Mood| if self.single { m } else { other(m) };
         let (before, mood, u) = match self.said {
-            Some(m) if t > talk_from && t < mid => (Mood::Neutral, m, morph(t - talk_from)),
-            Some(m) if t >= mid && t < talk_to => (m, other(m), morph(t - mid)),
-            Some(m) if t >= talk_to => (
-                if self.single { m } else { other(m) },
-                Mood::Neutral,
-                morph(t - talk_to),
-            ),
+            Some(m) if t > talk_from && t < first_to => (Mood::Neutral, m, morph(t - talk_from)),
+            Some(m) if t >= first_to && t < second_from => (m, Mood::Neutral, morph(t - first_to)),
+            Some(m) if t >= second_from && t < talk_to => {
+                (Mood::Neutral, other(m), morph(t - second_from))
+            }
+            Some(m) if t >= talk_to => (last(m), Mood::Neutral, morph(t - talk_to)),
             _ => (Mood::Neutral, Mood::Neutral, 1.0),
         };
         Some(Frame {
@@ -1190,6 +1197,72 @@ mod tests {
             let v = Visit::new(&mut rng, vec![m], &s, Some(forced), false);
             assert_eq!(v.voice(mood), Some(voice));
         }
+    }
+
+    /// The answers Bit speaks on a visit (it speaks each time it turns into
+    /// yes or no, as the visit player does).
+    fn spoken(v: &Visit) -> Vec<Mood> {
+        let (mut said, mut out, mut t) = (Mood::Neutral, Vec::new(), 0.0);
+        while let Some(f) = v.at(t) {
+            if f.mood != said {
+                said = f.mood;
+                if said != Mood::Neutral {
+                    out.push(said);
+                }
+            }
+            t += 1.0 / 60.0;
+        }
+        out
+    }
+
+    /// One answer per visit by default; changing its mind, the two answers
+    /// come with neutral in between, never back to back.
+    #[test]
+    fn one_answer_or_changes_its_mind() {
+        let m = Monitor {
+            x: 0.0,
+            y: 0.0,
+            w: 1920.0,
+            h: 1080.0,
+            scale: 1.0,
+            primary: true,
+        };
+        let one = Settings {
+            chattiness: 100,
+            ..Settings::default()
+        };
+        let mind = Settings {
+            changes_mind: true,
+            ..one.clone()
+        };
+        let mut rng = Rng(0x0bad_cafe_f00d_1234);
+        let mut changed = 0;
+        for _ in 0..200 {
+            assert!(spoken(&Visit::new(&mut rng, vec![m], &one, None, false)).len() <= 1);
+            let v = Visit::new(&mut rng, vec![m], &mind, None, false);
+            let said = spoken(&v);
+            assert!(said.len() <= 2);
+            if said.len() == 2 {
+                changed += 1;
+                assert_ne!(said[0], said[1]);
+                // Neutral for a moment between the two.
+                let mut t = 0.0;
+                let mut gap = 0.0;
+                let mut seen = false;
+                while let Some(f) = v.at(t) {
+                    seen |= f.mood != Mood::Neutral;
+                    if seen && f.mood == Mood::Neutral {
+                        gap += 1.0 / 60.0;
+                    }
+                    if f.mood == said[1] {
+                        break;
+                    }
+                    t += 1.0 / 60.0;
+                }
+                assert!(gap > 0.5, "neutral pause {gap}");
+            }
+        }
+        assert!(changed > 0);
     }
 
     /// Hovering, Bit flies in, stays by its spot (centre for Center),

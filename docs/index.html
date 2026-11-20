@@ -1,0 +1,198 @@
+<!doctype html>
+<!--
+  One-page user guide, served by GitHub Pages from this docs folder.
+  To reuse for another project: copy docs/, change the colours at the top of
+  style.css, replace the images, and rewrite the sections below. Keep every
+  file local (no outside fonts, scripts or trackers) and keep the CSP line.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Bit: desktop companion</title>
+<meta name="description" content="Bit visits your desktop now and then, hovers, says yes or no, and speeds off. Download and user guide.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <ul>
+    <li><a href="#download">Download</a></li>
+    <li><a href="#first-run">First run</a></li>
+    <li><a href="#using">Using Bit</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><a href="#safety">Is it safe?</a></li>
+    <li><a href="#stopping">Stop &amp; uninstall</a></li>
+    <li><a href="#help">Help</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<section class="hero">
+  <img src="bit.png" alt="Bit hovering, then saying yes and no" width="240" height="240">
+  <h1>BIT</h1>
+  <p class="tag">A tiny desktop companion that visits now and then, hovers, says <span class="yes">yes</span> or <span class="no">no</span>, and speeds off.</p>
+  <a class="button" href="https://github.com/Space-Paranoids/tron-bit-desktop/releases/latest">Download</a>
+  <a class="button" href="https://github.com/Space-Paranoids/tron-bit-desktop">Source code</a>
+</section>
+
+<section id="about">
+  <h2>What Bit is</h2>
+  <p>Bit flies over your desktop with no window or background of its own: only Bit itself is drawn. It lives in the system tray, uses no CPU between visits, and makes no network connections at all. Ask it a yes/no question and it answers with one truly random bit.</p>
+  <figure class="plain">
+    <img src="moods.png" alt="Bit's three shapes: the icy-blue neutral ball, the yellow YES octahedron and the orange NO star" width="720" height="240">
+    <figcaption>Neutral, <span class="yes">YES</span> and <span class="no">NO</span>.</figcaption>
+  </figure>
+</section>
+
+<section id="download">
+  <h2>Download</h2>
+  <p>Get the latest version from the <a href="https://github.com/Space-Paranoids/tron-bit-desktop/releases/latest">Releases page</a>. Pick the file for your system:</p>
+  <table>
+    <thead><tr><th>System</th><th>Download</th></tr></thead>
+    <tbody>
+      <tr><td>Windows 10 / 11</td><td><code>windows</code> zip, holding <code>tron-bit.exe</code></td></tr>
+      <tr><td>macOS 11 or later</td><td><code>macos</code> download, holding <code>Bit.app</code></td></tr>
+      <tr><td>Linux, 64-bit PC</td><td><code>linux</code> download</td></tr>
+      <tr><td>Linux, 64-bit ARM (Raspberry Pi OS 64-bit, Pinebook, Armbian)</td><td><code>linux-arm64</code> download</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Not sure which Linux one? Run <code>uname -m</code>: <code>x86_64</code> means <code>linux</code>, <code>aarch64</code> means <code>linux-arm64</code>.</p>
+</section>
+
+<section id="first-run">
+  <h2>First run</h2>
+
+  <h3>Windows</h3>
+  <p>Bit isn't signed yet, so Windows blocks it the first time.</p>
+  <ol>
+    <li>Unzip the download. A good home for <code>tron-bit.exe</code> is <code>%LOCALAPPDATA%\Programs\Bit\</code> (no admin rights needed).</li>
+    <li>Right-click <code>tron-bit.exe</code>, choose <b>Properties</b>, tick <b>Unblock</b>, and click <b>OK</b>.</li>
+    <li>Double-click it. If SmartScreen warns, click <b>More info</b>, then <b>Run anyway</b>.</li>
+  </ol>
+  <p>Bit appears in the tray (click the <b>^</b> arrow by the clock if you don't see it). It starts at login from then on, which you can turn off in Settings.</p>
+
+  <h3>macOS</h3>
+  <p>Bit runs in the menu bar with no Dock icon. The first time, right-click <code>Bit.app</code> and choose <b>Open</b>, since it isn't signed. macOS is untested so far.</p>
+
+  <h3>Linux</h3>
+  <p>In a terminal, in the folder you downloaded to (use the file name as downloaded):</p>
+<pre>tar -xzf tron-bit-0.4.0-linux.tar.gz
+cd tron-bit-0.4.0-linux
+./install.sh --autostart</pre>
+  <p>This needs no <code>sudo</code>. It puts Bit in <code>~/.local/bin</code> and in your app menu; <code>--autostart</code> also starts it at login. Then start <b>Bit</b> from the app menu.</p>
+  <p>On small ARM laptops and boards, or if Bit's windows come up black, add <code>--software</code>:</p>
+<pre>./install.sh --software --autostart</pre>
+</section>
+
+<section id="using">
+  <h2>Using Bit</h2>
+  <table>
+    <thead><tr><th>To do this</th><th>Do this</th></tr></thead>
+    <tbody>
+      <tr><td>Open Settings</td><td>Left-click the tray icon</td></tr>
+      <tr><td>Tray menu</td><td>Right-click the tray icon: <i>Ask Bit</i>, <i>Show Bit now</i>, <i>Pause visits</i>, <i>Always on</i>, <i>Settings</i>, <i>Quit Bit</i></td></tr>
+      <tr><td>Ask Bit a question</td><td>Think of a yes/no question, then press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>B</kbd> anywhere (or <i>Ask Bit</i> in the tray). Bit flies in, thinks, and answers out loud.</td></tr>
+      <tr><td>Shoo Bit away</td><td>Click it while it's on screen</td></tr>
+      <tr><td>Move Bit</td><td>Drag it (Windows). Holding it pauses the visit.</td></tr>
+      <tr><td>Keep Bit around</td><td><i>Always on</i> in the tray menu. Double-click Bit to go back to visits.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Every answer comes from your system's secure random generator, so yes and no are exactly even and can't be predicted. Clicking, dragging and the Ask Bit key are Windows-only for now.</p>
+</section>
+
+<section id="settings">
+  <h2>Settings</h2>
+  <figure>
+    <img src="settings.png" alt="Bit's settings window" width="860" height="695" loading="lazy">
+  </figure>
+  <table>
+    <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Says something</td><td>How often Bit says yes or no on a visit.</td></tr>
+      <tr><td>Screens</td><td>All screens, the main one, all but the main one, or <i>Chosen screens</i> picked on a little map. Bit never shows on a screen it's kept off.</td></tr>
+      <tr><td>Mode: Always on</td><td>Bit stays on one screen, roaming like it's trapped behind the glass, or hovering in one spot (<i>Movement</i>). <i>Restlessness</i> sets how lively it is.</td></tr>
+      <tr><td>Hangs out</td><td>Where on the screen Bit mostly hovers.</td></tr>
+      <tr><td>Clicking Bit</td><td>Shoo it (default), ask it, or do nothing (clicks pass straight through).</td></tr>
+      <tr><td>Sound</td><td>Volume, plus a switch and TRY IT button for each clip.</td></tr>
+      <tr><td>Ask Bit key</td><td>Click it, then hold your new keys. <kbd>Esc</kbd> keeps the old key, <kbd>Delete</kbd> turns it off.</td></tr>
+      <tr><td>Quiet during calls</td><td>No visits while an app uses your microphone (on by default, Windows).</td></tr>
+      <tr><td>Quiet hours</td><td>No visits between two times (default 22:00 to 08:00).</td></tr>
+      <tr><td>Hide from captures</td><td>Keeps Bit out of screenshots, recordings and screen sharing (Windows). Uses a little more memory.</td></tr>
+      <tr><td>Low power</td><td>About 30 frames a second instead of your display's rate (on by default).</td></tr>
+      <tr><td>Start at login</td><td>On from the first run (Windows).</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Bit also stays away while a full-screen game or presentation is running (Windows). Settings save by themselves to <code>%APPDATA%\tron-bit\</code> on Windows, <code>~/Library/Application Support/tron-bit/</code> on macOS, and <code>~/.config/tron-bit/</code> on Linux.</p>
+</section>
+
+<section id="safety">
+  <h2>Is it safe?</h2>
+  <ul>
+    <li><b>No network.</b> Bit never connects to the internet or sends anything anywhere.</li>
+    <li><b>Built in the open.</b> Every release is built by GitHub from the public source code, not on someone's PC.</li>
+    <li><b>Checksums.</b> Each release includes <code>SHA256SUMS.txt</code> so you can check your download is exactly what was built.</li>
+    <li><b>Antivirus warnings.</b> New, unsigned programs are sometimes flagged just because few people have run them yet. Free code signing is on the way.</li>
+  </ul>
+  <h3>Check a download (Windows)</h3>
+  <p>Open PowerShell in the folder you downloaded to, run this, and compare the hash with the matching line in <code>SHA256SUMS.txt</code>:</p>
+<pre>Get-FileHash .\tron-bit-*-windows.zip</pre>
+  <h3>Check a download (macOS / Linux)</h3>
+<pre>sha256sum -c SHA256SUMS.txt --ignore-missing</pre>
+</section>
+
+<section id="stopping">
+  <h2>Stop &amp; uninstall</h2>
+  <ul>
+    <li><b>Quit:</b> right-click the tray icon and choose <i>Quit Bit</i>. It stops cleanly, saves settings and removes its icon.</li>
+    <li><b>Windows:</b> turn off <i>Start at login</i> in Settings, quit Bit, then delete <code>tron-bit.exe</code>. To remove settings too, delete <code>%APPDATA%\tron-bit</code>.</li>
+    <li><b>macOS:</b> quit Bit and drag <code>Bit.app</code> to the Trash.</li>
+    <li><b>Linux:</b> from the folder you installed from, run the command below. Your settings stay in <code>~/.config/tron-bit</code>.</li>
+  </ul>
+<pre>./install.sh --uninstall</pre>
+</section>
+
+<section id="help">
+  <h2>Help</h2>
+  <details>
+    <summary>I can't see Bit's tray icon (Windows)</summary>
+    <p>Click the <b>^</b> arrow by the clock. You can drag Bit's icon onto the taskbar to keep it visible.</p>
+  </details>
+  <details>
+    <summary>No tray icon on GNOME / Ubuntu</summary>
+    <p>Install the <i>AppIndicator and KStatusNotifierItem Support</i> extension. KDE shows tray icons out of the box.</p>
+  </details>
+  <details>
+    <summary>Settings window is all black (Linux)</summary>
+    <p>Common on older or small ARM graphics chips. Quit Bit and reinstall with <code>./install.sh --software --autostart</code>.</p>
+  </details>
+  <details>
+    <summary>Bit flies inside a black square (Linux)</summary>
+    <p>Turn on your desktop's compositor. On XFCE: Settings, Window Manager Tweaks, Compositor, <i>Enable display compositing</i>.</p>
+  </details>
+  <details>
+    <summary>It complains about a missing .so library (Linux)</summary>
+    <p>Install the runtime packages:</p>
+<pre>sudo apt install libgtk-3-0 libayatana-appindicator3-1 libxdo3</pre>
+    <p>On Fedora: <code>sudo dnf install gtk3 libayatana-appindicator-gtk3 libxdo</code></p>
+  </details>
+  <details>
+    <summary>Steam Deck, 32-bit ARM, or building it yourself</summary>
+    <p>See the full <a href="https://github.com/Space-Paranoids/tron-bit-desktop#readme">README</a> for these and the build-from-source steps.</p>
+  </details>
+</section>
+
+</main>
+
+<footer>
+  <p>Bit's code is under the <a href="https://github.com/Space-Paranoids/tron-bit-desktop#license">MIT License</a>. Bit's 3D model is <a href="https://www.thingiverse.com/thing:2748353">BIT</a> by Ferjerez (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Orbitron font under the SIL Open Font License.</p>
+  <p>Bit is a personal, non-commercial fan project, provided "as is" with no warranty and no support. It is not affiliated with, endorsed by or connected to The Walt Disney Company. TRON, Bit and related names are trademarks or copyrights of their respective owners.</p>
+</footer>
+
+<script src="copy.js"></script>
+</body>
+</html>
