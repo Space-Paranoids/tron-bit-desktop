@@ -1,12 +1,11 @@
 //! Bit's shapes, and a small software renderer that draws them: flat
 //! facets in a deep color, a sharp white glint, tumbling, the neutral ball
-//! shimmering between its two forms, and each change of shape swelling out
+//! pulsing between its two forms, and each change of shape swelling out
 //! through the old one.
 //!
 //! Output is premultiplied BGRA (`0xAARRGGBB`), antialiased by
 //! supersampling, ready for a per-pixel-alpha window.
 
-use std::f32::consts::TAU;
 use std::sync::OnceLock;
 
 type V3 = [f32; 3];
@@ -19,8 +18,14 @@ pub enum Mood {
     No,
 }
 
-/// Neutral's back-and-forth swaps between its two forms per second.
-const SHIMMER: f32 = 1.6;
+/// Neutral's swap timing: a little slower than the film (a new form about
+/// every 0.27 s there), to taste: about every 0.4 s here, half of it the swap.
+/// Seconds neutral rests in each form between swaps.
+const NEUTRAL_HOLD: f32 = 0.2;
+/// Seconds one neutral swap takes.
+const NEUTRAL_MORPH: f32 = 0.2;
+/// Scale of neutral's resting form: only just inside the other.
+const NEUTRAL_TUCK: f32 = 0.85;
 /// Seconds Bit takes to change shape.
 pub const MORPH: f32 = 0.3;
 /// Scale of a shape tucked away inside another (small enough to hide).
@@ -72,7 +77,14 @@ fn shapes() -> &'static Shapes {
             at += n * 36;
             tris
         };
-        let neutral = [next(), next()];
+        let mut neutral = [next(), next()];
+        // The second neutral form is stored turned 90 degrees from the first.
+        // Turn it back (about x) so its points line up with the first form's
+        // dimples, and the first form's points with its dimples, as they pass
+        // through each other. A turn, not a mirror, so the facets still face out.
+        for v in neutral[1].iter_mut().flatten() {
+            *v = [v[0], -v[2], v[1]];
+        }
         let (yes, no) = (next(), next());
         let far = |tris: &[Tri]| tris.iter().flatten().map(|v| len(*v)).fold(0.0, f32::max);
         let neutral_reach = far(&neutral[0]).max(far(&neutral[1]));
@@ -104,9 +116,18 @@ pub fn smoothstep(e0: f32, e1: f32, x: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
-/// How much of neutral's first form is out at time `t` (0 to 1).
+/// How much of neutral's second form is out at time `t` (0 to 1). The two
+/// forms pulse into each other the way yes and no change: one grows out of
+/// the other while that one shrinks inside it, over NEUTRAL_MORPH seconds,
+/// then it rests for NEUTRAL_HOLD before swapping back.
 fn neutral_mix(t: f32) -> f32 {
-    smoothstep(0.15, 0.85, 0.5 + 0.5 * (t * TAU * SHIMMER).sin())
+    let leg = NEUTRAL_HOLD + NEUTRAL_MORPH;
+    let p = t.rem_euclid(2.0 * leg);
+    if p < leg {
+        smoothstep(0.0, 1.0, (p - NEUTRAL_HOLD) / NEUTRAL_MORPH)
+    } else {
+        1.0 - smoothstep(0.0, 1.0, (p - leg - NEUTRAL_HOLD) / NEUTRAL_MORPH)
+    }
 }
 
 /// The shapes making up `mood` at time `t`, each with its scale and color.
@@ -116,10 +137,10 @@ fn parts(mood: Mood, t: f32) -> Vec<(&'static [Tri], f32, V3)> {
     match mood {
         Mood::Neutral => {
             let w = neutral_mix(t);
-            let grow = |w: f32| TUCKED + (1.0 - TUCKED) * (2.0 * w).min(1.0);
+            let grow = |w: f32| NEUTRAL_TUCK + (1.0 - NEUTRAL_TUCK) * w;
             vec![
-                (&s.neutral[0][..], grow(w), NEUTRAL),
-                (&s.neutral[1][..], grow(1.0 - w), NEUTRAL),
+                (&s.neutral[0][..], grow(1.0 - w), NEUTRAL),
+                (&s.neutral[1][..], grow(w), NEUTRAL),
             ]
         }
         Mood::Yes => vec![(&s.yes[..], YES_SIZE, YES)],
